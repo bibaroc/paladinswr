@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: paladinswr
+  labels:
+    app.kubernetes.io/name: paladinswr
+    app.kubernetes.io/part-of: paladinswr

@@ -1,0 +1,40 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: injector
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: injector
+    app.kubernetes.io/part-of: paladinswr
+spec:
+  schedule: "0 */2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: yornesek/wrcli
+            imagePullPolicy: Always
+            name: injector
+            env:
+            - name: WRCLI_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: paladinswr-injector
+                  key: WRCLI_TOKEN
+            - name: WRCLI_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: paladinswr-injector
+                  key: WRCLI_BUCKET
+            - name: WRCLI_ORG
+              valueFrom:
+                secretKeyRef:
+                  name: paladinswr-injector
+                  key: WRCLI_ORG
+            - name: WRCLI_URL
+              valueFrom:
+                secretKeyRef:
+                  name: paladinswr-injector
+                  key: WRCLI_URL
+          restartPolicy: OnFailure

@@ -83,3 +83,12 @@ type ChampionStats struct {
 		Played int `json:"played"`
 	} `json:"builds"`
 }
+
+type ShortChampionStats struct {
+	Name    string
+	Class   string
+	Winrate struct {
+		BestLoadout     float64
+		WeightedAverage float64
+	}
+}

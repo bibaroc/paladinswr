@@ -3,35 +3,67 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
+	"os"
+	"time"
 
-	"github.com/bibaroc/paladinswr/heroes"
 	"github.com/bibaroc/paladinswr/stats"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api"
 )
 
-// influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-
 func main() {
-	statsClient := stats.PaladinsGuru(http.DefaultClient)
+	inflixDBConfig := getWriteAPIConfig()
+	client := influxdb2.NewClient(inflixDBConfig.url, inflixDBConfig.token)
 
-	for _, name := range heroes.Flanker() {
-		heroStat, err := statsClient.GetChampionStats(name)
-		if err != nil {
-			log.Println(err)
-			return
+	defer client.Close()
+
+	writeAPI := client.WriteAPI(inflixDBConfig.org, inflixDBConfig.bucket)
+	go func(writer api.WriteAPI) {
+		for err := range writer.Errors() {
+			log.Println(err.Error())
+		}
+	}(writeAPI)
+
+	stats, err := stats.ListStats()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, st := range stats {
+		p := influxdb2.NewPointWithMeasurement("wr").
+			AddTag("unit", "percentage").
+			AddTag("class", st.Class).
+			AddTag("champion", st.Name).
+			AddField("max", st.Winrate.BestLoadout).
+			AddField("med", st.Winrate.WeightedAverage).
+			SetTime(time.Now())
+		writeAPI.WritePoint(p)
+	}
+
+	writeAPI.Flush()
+}
+
+type writeAPIConfg struct {
+	token  string
+	bucket string
+	org    string
+	url    string
+}
+
+func getWriteAPIConfig() writeAPIConfg {
+	mustString := func(s string) string {
+		if v, ok := os.LookupEnv(s); ok {
+			return v
 		}
 
-		fmt.Println(heroStat.Champion.Name)
+		panic(fmt.Sprintf("environment value for %q not found", s))
+	}
 
-		maxLoadoutWinrate := 0.0
-
-		for i := range heroStat.Loadouts {
-			loadoutWinrate := float64(heroStat.Loadouts[i].Wins) / float64(heroStat.Loadouts[i].Played) * 100
-			if loadoutWinrate > maxLoadoutWinrate {
-				maxLoadoutWinrate = loadoutWinrate
-			}
-		}
-
-		fmt.Println("\t", "maxLoadoutWinrate", maxLoadoutWinrate)
+	return writeAPIConfg{
+		token:  mustString("WRCLI_TOKEN"),
+		bucket: mustString("WRCLI_BUCKET"),
+		org:    mustString("WRCLI_ORG"),
+		url:    mustString("WRCLI_URL"),
 	}
 }
