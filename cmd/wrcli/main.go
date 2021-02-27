@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/bibaroc/paladinswr/stats"
+	"github.com/bibaroc/paladinswr/app/injector/stats"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
 )
@@ -36,7 +36,7 @@ func main() {
 			AddTag("class", st.Class).
 			AddTag("champion", st.Name).
 			AddField("max", st.Winrate.BestLoadout).
-			AddField("med", st.Winrate.WeightedAverage).
+			AddField("avg", st.Winrate.WeightedAverage).
 			SetTime(time.Now())
 		writeAPI.WritePoint(p)
 	}

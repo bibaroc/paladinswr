@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/bibaroc/paladinswr/heroes"
+	"github.com/bibaroc/paladinswr/app/injector/heroes"
 )
 
 func ListStats() ([]ShortChampionStats, error) {
