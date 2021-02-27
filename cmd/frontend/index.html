@@ -9,131 +9,218 @@
             -webkit-user-select: none;
             -ms-user-select: none;
         }
-    </style>
-    <style type="text/css">
-        /* Chart.js */
-        @keyframes chartjs-render-animation {
-            from {
-                opacity: .99
-            }
 
-            to {
-                opacity: 1
-            }
+        body,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            margin: 0;
+            padding: 0;
+            background: #e5e9f0;
         }
 
-        .chartjs-render-monitor {
-            animation: chartjs-render-animation 1ms
+        ul {
+            margin: 0;
+            padding: 0;
+            list-style-type: none;
         }
 
-        .chartjs-size-monitor,
-        .chartjs-size-monitor-expand,
-        .chartjs-size-monitor-shrink {
-            position: absolute;
-            direction: ltr;
-            left: 0;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            overflow: hidden;
-            pointer-events: none;
-            visibility: hidden;
-            z-index: -1
+        /* li {
+            border: 1px solid red;
+        } */
+
+        .nav>li {
+            float: left;
+            width: 20%;
         }
 
-        .chartjs-size-monitor-expand>div {
-            position: absolute;
-            width: 1000000px;
-            height: 1000000px;
-            left: 0;
-            top: 0
+        .list-container {
+            padding: 0 1rem;
         }
 
-        .chartjs-size-monitor-shrink>div {
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            left: 0;
-            top: 0
+        .list-container li {
+            margin: 0.25rem 0;
+            padding-left: 5px;
+        }
+
+        .active {
+            background: linear-gradient(90deg, #8fbcbb 0%, #88c0d0 35%, #5e81ac 100%);
         }
     </style>
 </head>
 
-<body>
-    <div style="width:100vw;">
-        <div class="chartjs-size-monitor">
-            <div class="chartjs-size-monitor-expand">
-                <div class=""></div>
-            </div>
-            <div class="chartjs-size-monitor-shrink">
-                <div class=""></div>
-            </div>
-        </div>
-        <canvas id="canvas" style="display: block; width: 100%; height: 75%px;" class="chartjs-render-monitor"></canvas>
-        <!-- <canvas id="canvas" style="display: block; width: 100%; height: 75%px;" width="638" height="319"
-            class="chartjs-render-monitor"></canvas> -->
+<body style="margin: 1rem;">
+    <div style="height: 70vh;">
+        <canvas id="canvas" style="width: 100% !important;" class="chartjs-render-monitor"></canvas>
     </div>
+    <ul class="nav">
+        <li>
+            <div id="classes-container" class="list-container">
+                <h4>Classes</h4>
+                <ul id="classes" onclick="onClassesClick(event)">
+                </ul>
+            </div>
+        </li>
+        <li>
+            <div id="champions-container" class="list-container">
+                <h4>Champions</h4>
+                <ul id="champions" onclick="onChampionsClick(event)">
+                </ul>
+            </div>
+        </li>
+        <li>
+            <div id="stat-container" class="list-container">
+                <h4>Stat</h4>
+                <ul id="stat" onclick="onStatsClick(event)">
+                    <li id="stat-max" class="active">max</li>
+                    <li id="stat-avg" class="active">avg</li>
+                </ul>
+            </div>
+        </li>
+    </ul>
     <script>
+        toggleActiveClass = (classList, isActive) => isActive ? classList.remove("active") : classList.add("active")
+
+        function onClassesClick(e) {
+            if (e.target.tagName !== "LI")
+                return
+            if (e.target.classList.contains("active"))
+                e.target.classList.remove("active")
+            else
+                e.target.classList.add("active")
+        }
+
+        function onChampionsClick(e) {
+            if (e.target.tagName !== "LI")
+                return
+
+            const isActive = e.target.classList.contains("active")
+            toggleActiveClass(e.target.classList, isActive)
+
+
+            const pointers = championIndex[e.target.textContent]
+            if (document.getElementById("stat-max").classList.contains("active"))
+                wrChart.data.datasets[pointers.max].hidden = isActive
+            if (document.getElementById("stat-avg").classList.contains("active"))
+                wrChart.data.datasets[pointers.avg].hidden = isActive
+
+            wrChart.update()
+        }
+
+        function onStatsClick(e) {
+            if (e.target.tagName !== "LI")
+                return
+
+            const isActive = e.target.classList.contains("active")
+            toggleActiveClass(e.target.classList, isActive)
+
+            const pointers = statIndex[e.target.textContent]
+            for (index of pointers)
+                wrChart.data.datasets[index].hidden = isActive
+
+            wrChart.update()
+        }
+
         var championData = {
             "Flanks": {
                 "Buck": {
                     "2016-06-20T12:41:45.14Z": {
-                        "med": 55.4,
-                        "max": 63.4,
+                        "avg": 45,
+                        "max": 46,
                     },
                     "2016-06-21T12:41:45.14Z": {
-                        "med": 51.4,
-                        "max": 62.4,
+                        "avg": 47,
+                        "max": 48,
                     }
                 },
                 "Maeve": {
                     "2016-06-20T12:41:45.14Z": {
-                        "med": 55.4,
-                        "max": 63.4,
+                        "avg": 49,
+                        "max": 50,
                     },
                     "2016-06-21T12:41:45.14Z": {
-                        "med": 51.4,
-                        "max": 62.4,
+                        "avg": 51,
+                        "max": 52,
                     }
                 }
-            }
-        }
-
-
-
-        var config = {
-            type: 'line',
-            data: {
-                datasets: []
             },
-            options: {
-                responsive: true,
-                legend: {
-                    position: 'bottom',
+            "Tanks": {
+                "Raum": {
+                    "2016-06-20T12:41:45.14Z": {
+                        "avg": 53,
+                        "max": 54,
+                    },
+                    "2016-06-21T12:41:45.14Z": {
+                        "avg": 55,
+                        "max": 56,
+                    }
                 },
-                hover: {
-                    mode: 'index'
-                },
-            }
-        };
-
-        for (className in championData) {
-            for (championName in championData[className]) {
-                const data = Object.keys(championData[className][championName]).map(datapointTS => (
-                    {
-                        x: Date.parse(datapointTS),
-                        y: championData[className][championName][datapointTS].max,
-                    }))
-                console.log(data)
-            }
+                "Barik": {
+                    "2016-06-20T12:41:45.14Z": {
+                        "avg": 57,
+                        "max": 58,
+                    },
+                    "2016-06-21T12:41:45.14Z": {
+                        "avg": 59,
+                        "max": 60,
+                    }
+                }
+            },
         }
 
+
+
+        var classChampionIndex = {}
+        var championIndex = {}
+        var statIndex = { max: [], avg: [] }
 
         window.onload = function () {
+            let config = {
+                type: 'line',
+                data: {
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: {
+                        position: 'bottom',
+                    },
+                    hover: {
+                        mode: 'index'
+                    },
+                },
+            }
+
             for (className in championData) {
+                if (!classChampionIndex[className])
+                    classChampionIndex[className] = {}
+
+                let championClassListItem = document.createElement("li")
+                championClassListItem.classList.add("active")
+                championClassListItem.appendChild(document.createTextNode(className))
+
+                document.getElementById("classes").appendChild(championClassListItem)
+
                 for (championName in championData[className]) {
+                    let championsListItem = document.createElement("li")
+                    championsListItem.classList.add("active")
+                    championsListItem.appendChild(document.createTextNode(championName))
+
+                    document.getElementById("champions").appendChild(championsListItem)
+
+                    if (!classChampionIndex[className][championName])
+                        classChampionIndex[className][championName] = {}
+
+                    classChampionIndex[className][championName].max = config.data.datasets.length
+                    championIndex[championName] = { max: config.data.datasets.length }
+                    statIndex.max.push(config.data.datasets.length)
+
                     config.data.datasets.push({
-                        label: `${championName} - mid`,
+                        label: `${championName} - max`,
                         data: Object.keys(championData[className][championName]).map(datapointTS => (
                             {
                                 x: Date.parse(datapointTS),
@@ -142,11 +229,26 @@
                         fill: false,
                         pointHoverRadius: 10,
                     })
+
+                    classChampionIndex[className][championName].avg = config.data.datasets.length
+                    championIndex[championName].avg = config.data.datasets.length
+                    statIndex.avg.push(config.data.datasets.length)
+
+                    config.data.datasets.push({
+                        label: `${championName} - avg`,
+                        data: Object.keys(championData[className][championName]).map(datapointTS => (
+                            {
+                                x: Date.parse(datapointTS),
+                                y: championData[className][championName][datapointTS].avg,
+                            })),
+                        fill: false,
+                        pointHoverRadius: 10,
+                    })
                 }
             }
 
             var ctx = document.getElementById('canvas').getContext('2d');
-            window.myLine = new Chart(ctx, config);
+            window.wrChart = new Chart(ctx, config);
         };
     </script>
 
