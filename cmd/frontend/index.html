@@ -82,44 +82,45 @@
         </li>
     </ul>
     <script>
-        toggleActiveClass = (classList, isActive) => isActive ? classList.remove("active") : classList.add("active")
+        toggleActiveClass = (classList) => classList.contains("active") ? classList.remove("active") : classList.add("active")
+        toggleChart = champion => {
+            const pointers = championToIndex[champion.textContent]
+            if (champion.hidden || !champion.classList.contains("active")) {
+                wrChart.data.datasets[pointers.max].hidden = true
+                wrChart.data.datasets[pointers.avg].hidden = true
+            } else if (champion.classList.contains("active")) {
+                wrChart.data.datasets[pointers.max].hidden = !document.getElementById("stat-max").classList.contains("active")
+                wrChart.data.datasets[pointers.avg].hidden = !document.getElementById("stat-avg").classList.contains("active")
+            }
+        }
 
         function onClassesClick(e) {
-            if (e.target.tagName !== "LI")
+            if (e.target.tagName !== "LI" || !wrChart)
                 return
-            if (e.target.classList.contains("active"))
-                e.target.classList.remove("active")
-            else
-                e.target.classList.add("active")
+
+            toggleActiveClass(e.target.classList)
+
+            wrChart.update()
         }
 
         function onChampionsClick(e) {
-            if (e.target.tagName !== "LI")
+            if (e.target.tagName !== "LI" || !wrChart)
                 return
 
-            const isActive = e.target.classList.contains("active")
-            toggleActiveClass(e.target.classList, isActive)
-
-
-            const pointers = championIndex[e.target.textContent]
-            if (document.getElementById("stat-max").classList.contains("active"))
-                wrChart.data.datasets[pointers.max].hidden = isActive
-            if (document.getElementById("stat-avg").classList.contains("active"))
-                wrChart.data.datasets[pointers.avg].hidden = isActive
+            toggleActiveClass(e.target.classList)
+            toggleChart(e.target)
 
             wrChart.update()
         }
 
         function onStatsClick(e) {
-            if (e.target.tagName !== "LI")
+            if (e.target.tagName !== "LI" || !wrChart)
                 return
 
-            const isActive = e.target.classList.contains("active")
-            toggleActiveClass(e.target.classList, isActive)
-
-            const pointers = statIndex[e.target.textContent]
-            for (index of pointers)
-                wrChart.data.datasets[index].hidden = isActive
+            toggleActiveClass(e.target.classList)
+            for (champion of document.getElementById("champions").children) {
+                toggleChart(champion)
+            }
 
             wrChart.update()
         }
@@ -173,9 +174,9 @@
 
 
 
-        var classChampionIndex = {}
-        var championIndex = {}
-        var statIndex = { max: [], avg: [] }
+        var classChampionIndex = Object.keys(championData).map(className => ({ [className]: [] })).reduce((acc, sing) => Object.assign(acc, sing))
+        var championToIndex = {}
+        var statToIndex = { max: [], avg: [] }
 
         window.onload = function () {
             let config = {
@@ -196,58 +197,55 @@
             }
 
             for (className in championData) {
-                if (!classChampionIndex[className])
-                    classChampionIndex[className] = {}
+                { // create class list entry
+                    let championClassListItem = document.createElement("li")
+                    championClassListItem.classList.add("active")
+                    championClassListItem.appendChild(document.createTextNode(className))
 
-                let championClassListItem = document.createElement("li")
-                championClassListItem.classList.add("active")
-                championClassListItem.appendChild(document.createTextNode(className))
-
-                document.getElementById("classes").appendChild(championClassListItem)
+                    document.getElementById("classes").appendChild(championClassListItem)
+                }
 
                 for (championName in championData[className]) {
-                    let championsListItem = document.createElement("li")
-                    championsListItem.classList.add("active")
-                    championsListItem.appendChild(document.createTextNode(championName))
+                    { // create champion list entry
+                        let championsListItem = document.createElement("li")
+                        championsListItem.classList.add("active")
+                        championsListItem.appendChild(document.createTextNode(championName))
 
-                    document.getElementById("champions").appendChild(championsListItem)
+                        document.getElementById("champions").appendChild(championsListItem)
+                    }
 
-                    if (!classChampionIndex[className][championName])
-                        classChampionIndex[className][championName] = {}
 
-                    classChampionIndex[className][championName].max = config.data.datasets.length
-                    championIndex[championName] = { max: config.data.datasets.length }
-                    statIndex.max.push(config.data.datasets.length)
+                    championToIndex[championName] = { max: config.data.datasets.length, avg: config.data.datasets.length + 1 }
+                    statToIndex.max.push(config.data.datasets.length)
+                    statToIndex.avg.push(config.data.datasets.length + 1)
 
-                    config.data.datasets.push({
-                        label: `${championName} - max`,
-                        data: Object.keys(championData[className][championName]).map(datapointTS => (
-                            {
-                                x: Date.parse(datapointTS),
-                                y: championData[className][championName][datapointTS].max,
-                            })),
-                        fill: false,
-                        pointHoverRadius: 10,
-                    })
 
-                    classChampionIndex[className][championName].avg = config.data.datasets.length
-                    championIndex[championName].avg = config.data.datasets.length
-                    statIndex.avg.push(config.data.datasets.length)
-
-                    config.data.datasets.push({
-                        label: `${championName} - avg`,
-                        data: Object.keys(championData[className][championName]).map(datapointTS => (
-                            {
-                                x: Date.parse(datapointTS),
-                                y: championData[className][championName][datapointTS].avg,
-                            })),
-                        fill: false,
-                        pointHoverRadius: 10,
-                    })
+                    { // chart.js datasets
+                        config.data.datasets.push({
+                            label: `${championName} - max`,
+                            data: Object.keys(championData[className][championName]).map(datapointTS => (
+                                {
+                                    x: Date.parse(datapointTS),
+                                    y: championData[className][championName][datapointTS].max,
+                                })),
+                            fill: false,
+                            pointHoverRadius: 10,
+                        })
+                        config.data.datasets.push({
+                            label: `${championName} - avg`,
+                            data: Object.keys(championData[className][championName]).map(datapointTS => (
+                                {
+                                    x: Date.parse(datapointTS),
+                                    y: championData[className][championName][datapointTS].avg,
+                                })),
+                            fill: false,
+                            pointHoverRadius: 10,
+                        })
+                    }
                 }
             }
 
-            var ctx = document.getElementById('canvas').getContext('2d');
+            const ctx = document.getElementById('canvas').getContext('2d');
             window.wrChart = new Chart(ctx, config);
         };
     </script>
