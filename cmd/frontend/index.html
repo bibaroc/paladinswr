@@ -93,12 +93,23 @@
                 wrChart.data.datasets[pointers.avg].hidden = !document.getElementById("stat-avg").classList.contains("active")
             }
         }
+        toggleChampionVisibility = classO => {
+            const isActive = classO.classList.contains("active")
+            const champions = classToChampion[classO.textContent]
+            for (champion of champions) {
+                champion.hidden = !isActive
+            }
+        }
 
         function onClassesClick(e) {
             if (e.target.tagName !== "LI" || !wrChart)
                 return
 
             toggleActiveClass(e.target.classList)
+            toggleChampionVisibility(e.target)
+            for (champion of document.getElementById("champions").children) {
+                toggleChart(champion)
+            }
 
             wrChart.update()
         }
@@ -174,7 +185,7 @@
 
 
 
-        var classChampionIndex = Object.keys(championData).map(className => ({ [className]: [] })).reduce((acc, sing) => Object.assign(acc, sing))
+        var classToChampion = Object.keys(championData).map(className => ({ [className]: [] })).reduce((acc, sing) => Object.assign(acc, sing))
         var championToIndex = {}
         var statToIndex = { max: [], avg: [] }
 
@@ -206,8 +217,8 @@
                 }
 
                 for (championName in championData[className]) {
+                    let championsListItem = document.createElement("li")
                     { // create champion list entry
-                        let championsListItem = document.createElement("li")
                         championsListItem.classList.add("active")
                         championsListItem.appendChild(document.createTextNode(championName))
 
@@ -216,8 +227,9 @@
 
 
                     championToIndex[championName] = { max: config.data.datasets.length, avg: config.data.datasets.length + 1 }
-                    statToIndex.max.push(config.data.datasets.length)
-                    statToIndex.avg.push(config.data.datasets.length + 1)
+                    statToIndex.max = statToIndex.max.concat([config.data.datasets.length])
+                    statToIndex.avg = statToIndex.avg.concat([config.data.datasets.length + 1])
+                    classToChampion[className] = classToChampion[className].concat([championsListItem])
 
 
                     { // chart.js datasets
