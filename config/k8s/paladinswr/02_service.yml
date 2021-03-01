@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wrsvc
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: wrsvc
+    app.kubernetes.io/part-of: paladinswr
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wrsvc
+      app.kubernetes.io/part-of: paladinswr
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wrsvc
+        app.kubernetes.io/part-of: paladinswr
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9100'
+    spec:
+      containers:
+      - image: yornesek/wrsvc:latest
+        imagePullPolicy: Always
+        name: wrsvc
+        env:
+        - name: WRCLI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: paladinswr-wrsvc
+              key: WRCLI_TOKEN
+        - name: WRCLI_BUCKET
+          valueFrom:
+            secretKeyRef:
+              name: paladinswr-wrsvc
+              key: WRCLI_BUCKET
+        - name: WRCLI_ORG
+          valueFrom:
+            secretKeyRef:
+              name: paladinswr-wrsvc
+              key: WRCLI_ORG
+        - name: WRCLI_URL
+          valueFrom:
+            secretKeyRef:
+              name: paladinswr-wrsvc
+              key: WRCLI_URL
+        ports:
+        - containerPort: 9100
+          name: monitoring
+        - containerPort: 8080
+          name: web
+        resources:
+            limits:
+              cpu: 150m
+              memory: 75Mi
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: wr-svc
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: wrsvc
+    app.kubernetes.io/part-of: paladinswr
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: wrsvc
+    app.kubernetes.io/part-of: paladinswr
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080

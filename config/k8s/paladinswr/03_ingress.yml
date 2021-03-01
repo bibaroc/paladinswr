@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wr-ingress
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: wr-ingress
+    app.kubernetes.io/part-of: paladinswr
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/frontend-entry-points: https
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  tls:
+  - hosts: 
+    - paladinswr.dyslav.it
+    secretName: echo-tls
+  rules:
+  - host: paladinswr.dyslav.it
+    http:
+      paths:
+      - path: /stats
+        pathType: Exact
+        backend:
+          service:
+            name: wr-svc
+            port:
+              number: 8080
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: wr-svc
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: wrsvc
+    app.kubernetes.io/part-of: paladinswr
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: wrsvc
+    app.kubernetes.io/part-of: paladinswr
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
