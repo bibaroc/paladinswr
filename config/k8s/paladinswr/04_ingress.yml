@@ -30,6 +30,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: wrfrontendsvc
+            name: wrfrontend-svc
             port:
               number: 8080

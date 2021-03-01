@@ -41,7 +41,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app.kubernetes.io/name: wrfrontendsvc
+    app.kubernetes.io/name: wrfrontend
     app.kubernetes.io/part-of: paladinswr
   ports:
   - protocol: TCP
