@@ -1,94 +1,79 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"log"
+	"net"
+	"net/http"
 	"os"
-	"time"
+	"os/signal"
+	"syscall"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/bibaroc/paladinswr/app/wrsvc"
+	"github.com/go-kit/kit/log"
+	"github.com/oklog/oklog/pkg/group"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
-	inflixDBConfig := getWriteAPIConfig()
-	client := influxdb2.NewClient(inflixDBConfig.url, inflixDBConfig.token)
+	logger := log.NewLogfmtLogger(os.Stderr)
+	logger = log.With(logger, "ts", log.DefaultTimestampUTC)
+	logger = log.With(logger, "caller", log.DefaultCaller)
 
-	defer client.Close()
-	query := fmt.Sprintf("from(bucket:\"%v\")|> range(start: -30d) |> filter(fn: (r) => r._measurement == \"wr\")", inflixDBConfig.bucket)
-	queryAPI := client.QueryAPI(inflixDBConfig.org)
+	inflixDBConfig := wrsvc.GetWriteAPIConfig()
+	assetHandler, cancelFunc := wrsvc.CachedHTTPHandler(logger, inflixDBConfig)
 
-	result, err := queryAPI.Query(context.Background(), query)
-	if err != nil {
-		log.Println(err)
-		return
+	defer cancelFunc()
+
+	var g group.Group
+	{ // hello service
+		httpListener, err := net.Listen("tcp", ":8080")
+		if err != nil {
+			_ = logger.Log("transport", "HTTP", "during", "Listen", "err", err)
+			return
+		}
+
+		g.Add(func() error {
+			app := http.NewServeMux()
+			app.HandleFunc("/stats", assetHandler.GetStats)
+
+			_ = logger.Log("transport", "HTTP", "addr", ":8080")
+			return http.Serve(httpListener, app)
+		}, func(error) {
+			httpListener.Close()
+		})
 	}
 
-	response := make(map[string]map[string]map[time.Time]StatPoint)
-
-	for result.Next() {
-		championsClass := result.Record().ValueByKey("class").(string)
-		championsName := result.Record().ValueByKey("champion").(string)
-		statTime := result.Record().Time()
-
-		if _, ok := response[championsClass]; !ok {
-			fmt.Println("response[championsClass] is nill")
-			response[championsClass] = map[string]map[time.Time]StatPoint{}
+	{ // metrics
+		httpListener, err := net.Listen("tcp", ":9100")
+		if err != nil {
+			_ = logger.Log("transport", "HTTP", "during", "Listen", "err", err)
+			return
 		}
+		g.Add(func() error {
+			app := http.NewServeMux()
+			app.Handle("/metrics", promhttp.Handler())
 
-		if _, ok := response[championsClass][championsName]; !ok {
-			fmt.Println("response[championsClass][championsName] is nill")
-			response[championsClass][championsName] = map[time.Time]StatPoint{}
-		}
-
-		switch result.Record().Field() {
-		case "max":
-			response[championsClass][championsName][statTime] = StatPoint{
-				Average: response[championsClass][championsName][statTime].Average,
-				Max:     result.Record().Value().(float64),
+			_ = logger.Log("transport", "HTTP", "addr", ":9100")
+			return http.Serve(httpListener, app)
+		}, func(error) {
+			httpListener.Close()
+		})
+	}
+	{ // graceful shutdown
+		cancelInterrupt := make(chan struct{})
+		g.Add(func() error {
+			c := make(chan os.Signal, 1)
+			signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+			select {
+			case sig := <-c:
+				return fmt.Errorf("received signal %s", sig)
+			case <-cancelInterrupt:
+				return nil
 			}
-		case "avg":
-			response[championsClass][championsName][statTime] = StatPoint{
-				Average: result.Record().Value().(float64),
-				Max:     response[championsClass][championsName][statTime].Max,
-			}
-		}
-	}
-	// check for an error
-	if result.Err() != nil {
-		fmt.Printf("query parsing error: %s\n", result.Err().Error())
+		}, func(error) {
+			close(cancelInterrupt)
+		})
 	}
 
-	formatted, _ := json.MarshalIndent(response, "", "\t")
-	fmt.Println(string(formatted))
-}
-
-type writeAPIConfg struct {
-	token  string
-	bucket string
-	org    string
-	url    string
-}
-
-func getWriteAPIConfig() writeAPIConfg {
-	mustString := func(s string) string {
-		if v, ok := os.LookupEnv(s); ok {
-			return v
-		}
-
-		panic(fmt.Sprintf("environment value for %q not found", s))
-	}
-
-	return writeAPIConfg{
-		token:  mustString("WRCLI_TOKEN"),
-		bucket: mustString("WRCLI_BUCKET"),
-		org:    mustString("WRCLI_ORG"),
-		url:    mustString("WRCLI_URL"),
-	}
-}
-
-type StatPoint struct {
-	Average float64 `json:"avg,omitempty"`
-	Max     float64 `json:"max,omitempty"`
+	_ = logger.Log("exit", g.Run())
 }
