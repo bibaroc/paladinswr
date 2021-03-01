@@ -1,86 +1,91 @@
 <!DOCTYPE html>
 
 <head>
-    <title>Different Point Sizes</title>
+    <title>Palading winrates over time</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
     <style>
         canvas {
             -moz-user-select: none;
             -webkit-user-select: none;
             -ms-user-select: none;
+            max-width: 100%;
         }
 
-        body,
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
+        * {
             margin: 0;
             padding: 0;
-            background: #e5e9f0;
-        }
-
-        ul {
-            margin: 0;
-            padding: 0;
-            list-style-type: none;
-        }
-
-        /* li {
-            border: 1px solid red;
-        } */
-
-        .nav>li {
-            float: left;
-            width: 20%;
-        }
-
-        .list-container {
-            padding: 0 1rem;
-        }
-
-        .list-container li {
-            margin: 0.25rem 0;
-            padding-left: 5px;
+            border: 0;
+            outline: 0;
+            /* border: 1px solid red; */
         }
 
         .active {
             background: linear-gradient(90deg, #8fbcbb 0%, #88c0d0 35%, #5e81ac 100%);
         }
+
+        li {
+            list-style-type: none;
+        }
+
+
+        body {
+            height: 100vh;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: 3fr 1fr;
+            grid-column-gap: 0.5rem;
+            grid-row-gap: 1rem;
+        }
+
+        #canvas-container {
+            grid-area: 1 / 1 / 2 / 5;
+            margin: 1rem 1rem 0 1rem;
+        }
+
+        #classes-container {
+            grid-area: 2 / 1 / 3 / 2;
+            margin: 0 0 0 1rem;
+        }
+
+        #champions-container {
+            grid-area: 2 / 2 / 3 / 3;
+            max-height: 14rem;
+        }
+
+        #stat-container {
+            grid-area: 2 / 3 / 3 / 4;
+        }
+
+        ul {
+            max-height: 13rem;
+            overflow: auto;
+        }
     </style>
 </head>
 
-<body style="margin: 1rem;">
-    <div style="height: 70vh;">
-        <canvas id="canvas" style="width: 100% !important;" class="chartjs-render-monitor"></canvas>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas" class="chartjs-render-monitor"></canvas>
     </div>
-    <ul class="nav">
-        <li>
-            <div id="classes-container" class="list-container">
-                <h4>Classes</h4>
-                <ul id="classes" onclick="onClassesClick(event)">
-                </ul>
-            </div>
-        </li>
-        <li>
-            <div id="champions-container" class="list-container">
-                <h4>Champions</h4>
-                <ul id="champions" onclick="onChampionsClick(event)">
-                </ul>
-            </div>
-        </li>
-        <li>
-            <div id="stat-container" class="list-container">
-                <h4>Stat</h4>
-                <ul id="stat" onclick="onStatsClick(event)">
-                    <li id="stat-max" class="active">max</li>
-                    <li id="stat-avg" class="active">avg</li>
-                </ul>
-            </div>
-        </li>
-    </ul>
+    <div id="classes-container" class="list-container">
+        <h4>Classes</h4>
+        <ul id="classes" onclick="onClassesClick(event)">
+        </ul>
+    </div>
+    <div id="champions-container" class="list-container">
+        <h4>Champions</h4>
+        <ul id="champions" onclick="onChampionsClick(event)">
+        </ul>
+    </div>
+    <div id="stat-container" class="list-container">
+        <h4>Stat</h4>
+        <ul id="stat" onclick="onStatsClick(event)">
+            <li id="stat-max" class="active">max</li>
+            <li id="stat-avg" class="active">avg</li>
+        </ul>
+    </div>
+
     <script>
         toggleActiveClass = (classList) => classList.contains("active") ? classList.remove("active") : classList.add("active")
         toggleChart = champion => {
@@ -135,130 +140,116 @@
 
             wrChart.update()
         }
+        
+        // statRequest = fetch('https://paladinswr.dyslav.it')
+        statRequest = fetch('./stats')
 
-        var championData = {
-            "Flanks": {
-                "Buck": {
-                    "2016-06-20T12:41:45.14Z": {
-                        "avg": 45,
-                        "max": 46,
-                    },
-                    "2016-06-21T12:41:45.14Z": {
-                        "avg": 47,
-                        "max": 48,
-                    }
-                },
-                "Maeve": {
-                    "2016-06-20T12:41:45.14Z": {
-                        "avg": 49,
-                        "max": 50,
-                    },
-                    "2016-06-21T12:41:45.14Z": {
-                        "avg": 51,
-                        "max": 52,
-                    }
-                }
-            },
-            "Tanks": {
-                "Raum": {
-                    "2016-06-20T12:41:45.14Z": {
-                        "avg": 53,
-                        "max": 54,
-                    },
-                    "2016-06-21T12:41:45.14Z": {
-                        "avg": 55,
-                        "max": 56,
-                    }
-                },
-                "Barik": {
-                    "2016-06-20T12:41:45.14Z": {
-                        "avg": 57,
-                        "max": 58,
-                    },
-                    "2016-06-21T12:41:45.14Z": {
-                        "avg": 59,
-                        "max": 60,
-                    }
-                }
-            },
-        }
-
-
-
-        var classToChampion = Object.keys(championData).map(className => ({ [className]: [] })).reduce((acc, sing) => Object.assign(acc, sing))
-        var championToIndex = {}
-        var statToIndex = { max: [], avg: [] }
+        let classToChampion = {}
+        let championToIndex = {}
+        let statToIndex = { max: [], avg: [] }
 
         window.onload = function () {
-            let config = {
-                type: 'line',
-                data: {
-                    datasets: []
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    legend: {
-                        position: 'bottom',
-                    },
-                    hover: {
-                        mode: 'index'
-                    },
-                },
-            }
-
-            for (className in championData) {
-                { // create class list entry
-                    let championClassListItem = document.createElement("li")
-                    championClassListItem.classList.add("active")
-                    championClassListItem.appendChild(document.createTextNode(className))
-
-                    document.getElementById("classes").appendChild(championClassListItem)
-                }
-
-                for (championName in championData[className]) {
-                    let championsListItem = document.createElement("li")
-                    { // create champion list entry
-                        championsListItem.classList.add("active")
-                        championsListItem.appendChild(document.createTextNode(championName))
-
-                        document.getElementById("champions").appendChild(championsListItem)
+            statRequest
+                .then(response => {
+                    return response.json()
+                })
+                .then(championData => {
+                    console.log(championData)
+                    classToChampion = Object.keys(championData).map(className => ({ [className]: [] })).reduce((acc, sing) => Object.assign(acc, sing))
+                    let config = {
+                        type: 'line',
+                        data: {
+                            datasets: []
+                        },
+                        options: {
+                            scales: {
+                                xAxes: [{
+                                    type: 'time',
+                                    time: {
+                                        displayFormats: {
+                                            "datetime": "MMM D, YYYY, HH:mm",
+                                            "day": "MMM D",
+                                            "hour": "D/HH:mm",
+                                            "millisecond": "h:mm:ss.SSS a",
+                                            "minute": "h:mm a",
+                                            "month": "MMM YYYY",
+                                            "quarter": "[Q]Q - YYYY",
+                                            "second": "h:mm:ss a",
+                                            "week": "ll",
+                                            "year": "YYYY",
+                                        },
+                                    },
+                                    display: true,
+                                    gridLines: { display: false }
+                                }]
+                            },
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            legend: {
+                                display: false,
+                            },
+                            hover: {
+                                mode: 'index'
+                            },
+                        },
                     }
 
+                    for (className in championData) {
+                        { // create class list entry
+                            let championClassListItem = document.createElement("li")
+                            championClassListItem.classList.add("active")
+                            championClassListItem.appendChild(document.createTextNode(className))
 
-                    championToIndex[championName] = { max: config.data.datasets.length, avg: config.data.datasets.length + 1 }
-                    statToIndex.max = statToIndex.max.concat([config.data.datasets.length])
-                    statToIndex.avg = statToIndex.avg.concat([config.data.datasets.length + 1])
-                    classToChampion[className] = classToChampion[className].concat([championsListItem])
+                            document.getElementById("classes").appendChild(championClassListItem)
+                        }
+
+                        for (championName in championData[className]) {
+                            let championsListItem = document.createElement("li")
+                            { // create champion list entry
+                                championsListItem.classList.add("active")
+                                championsListItem.appendChild(document.createTextNode(championName))
+
+                                document.getElementById("champions").appendChild(championsListItem)
+                            }
 
 
-                    { // chart.js datasets
-                        config.data.datasets.push({
-                            label: `${championName} - max`,
-                            data: Object.keys(championData[className][championName]).map(datapointTS => (
-                                {
-                                    x: Date.parse(datapointTS),
-                                    y: championData[className][championName][datapointTS].max,
-                                })),
-                            fill: false,
-                            pointHoverRadius: 10,
-                        })
-                        config.data.datasets.push({
-                            label: `${championName} - avg`,
-                            data: Object.keys(championData[className][championName]).map(datapointTS => (
-                                {
-                                    x: Date.parse(datapointTS),
-                                    y: championData[className][championName][datapointTS].avg,
-                                })),
-                            fill: false,
-                            pointHoverRadius: 10,
-                        })
+                            championToIndex[championName] = { max: config.data.datasets.length, avg: config.data.datasets.length + 1 }
+                            statToIndex.max = statToIndex.max.concat([config.data.datasets.length])
+                            statToIndex.avg = statToIndex.avg.concat([config.data.datasets.length + 1])
+                            classToChampion[className] = classToChampion[className].concat([championsListItem])
+
+
+                            { // chart.js datasets
+                                config.data.datasets.push({
+                                    label: `${championName} - max`,
+                                    data: Object.keys(championData[className][championName]).map(datapointTS => (
+                                        {
+                                            x: Date.parse(datapointTS),
+                                            y: championData[className][championName][datapointTS].max,
+                                        })),
+                                    fill: false,
+                                    pointHoverRadius: 10,
+                                })
+                                config.data.datasets.push({
+                                    label: `${championName} - avg`,
+                                    data: Object.keys(championData[className][championName]).map(datapointTS => (
+                                        {
+                                            x: Date.parse(datapointTS),
+                                            y: championData[className][championName][datapointTS].avg,
+                                        })),
+                                    fill: false,
+                                    pointHoverRadius: 10,
+                                })
+                            }
+                        }
                     }
-                }
-            }
 
-            const ctx = document.getElementById('canvas').getContext('2d');
-            window.wrChart = new Chart(ctx, config);
+                    const ctx = document.getElementById('canvas').getContext('2d');
+                    window.wrChart = new Chart(ctx, config);
+                })
+                .catch(err => {
+                    console.error(err)
+                })
         };
     </script>
 
