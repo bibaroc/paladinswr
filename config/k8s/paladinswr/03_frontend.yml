@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wrfrontend
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: wrfrontend
+    app.kubernetes.io/part-of: paladinswr
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wrfrontend
+      app.kubernetes.io/part-of: paladinswr
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wrfrontend
+        app.kubernetes.io/part-of: paladinswr
+    spec:
+      containers:
+      - image: yornesek/wrfrontend:latest
+        imagePullPolicy: Always
+        name: wrfrontend
+        ports:
+        - containerPort: 80
+          name: web
+        resources:
+            limits:
+              cpu: 150m
+              memory: 50Mi
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: wrfrontend-svc
+  namespace: paladinswr
+  labels:
+    app.kubernetes.io/name: wrfrontendsvc
+    app.kubernetes.io/part-of: paladinswr
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: wrfrontendsvc
+    app.kubernetes.io/part-of: paladinswr
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 80

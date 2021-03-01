@@ -26,22 +26,10 @@ spec:
             name: wr-svc
             port:
               number: 8080
-
----
-kind: Service
-apiVersion: v1
-metadata:
-  name: wr-svc
-  namespace: paladinswr
-  labels:
-    app.kubernetes.io/name: wrsvc
-    app.kubernetes.io/part-of: paladinswr
-spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: wrsvc
-    app.kubernetes.io/part-of: paladinswr
-  ports:
-  - protocol: TCP
-    port: 8080
-    targetPort: 8080
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: wrfrontendsvc
+            port:
+              number: 8080

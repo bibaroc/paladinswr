@@ -108,7 +108,7 @@ func (c *cached) GetStats(rw http.ResponseWriter, r *http.Request) {
 		defer c.mx.Unlock()
 		c.cachedData = statsData
 	}
-
+	rw.Header().Set("Cache-Control", "public, max-age=7200, immutable")
 	_, _ = rw.Write(c.cachedData)
 }
 
