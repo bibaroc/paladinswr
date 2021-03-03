@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/name: injector
     app.kubernetes.io/part-of: paladinswr
 spec:
-  schedule: "0 */2 * * *"
+  schedule: "0 */8 * * *"
   jobTemplate:
     spec:
       template:
