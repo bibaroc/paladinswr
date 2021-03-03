@@ -71,11 +71,12 @@ type StatPoint struct {
 }
 
 type cached struct {
-	m          wrSVCMetrics
-	logger     log.Logger
-	getterFunc func() (map[string]map[string]map[time.Time]StatPoint, error)
-	cachedData []byte
-	mx         sync.Mutex
+	m             wrSVCMetrics
+	logger        log.Logger
+	getterFunc    func() (map[string]map[string]map[time.Time]StatPoint, error)
+	lastUpdatedAt time.Time
+	cachedData    []byte
+	mx            sync.Mutex
 }
 
 func (c *cached) GetStats(rw http.ResponseWriter, r *http.Request) {
@@ -87,7 +88,9 @@ func (c *cached) GetStats(rw http.ResponseWriter, r *http.Request) {
 		c.m.requestLatency.With(lvs...).Observe(time.Since(begin).Seconds())
 	}(time.Now())
 
-	if c.cachedData == nil || r.Header.Get("Cache-Control") == "no-cache" {
+	if c.cachedData == nil ||
+		r.Header.Get("Cache-Control") == "no-cache" ||
+		c.lastUpdatedAt.Add(4*time.Hour).Before(time.Now()) {
 		stats, err := c.getterFunc()
 		if err != nil {
 			http.Error(rw, err.Error(), 500)
@@ -105,11 +108,15 @@ func (c *cached) GetStats(rw http.ResponseWriter, r *http.Request) {
 		}
 
 		c.mx.Lock()
-		defer c.mx.Unlock()
 		c.cachedData = statsData
+		c.mx.Unlock()
 	}
+
 	rw.Header().Set("Cache-Control", "public, max-age=7200, immutable")
+
+	c.mx.Lock()
 	_, _ = rw.Write(c.cachedData)
+	c.mx.Unlock()
 }
 
 func CachedHTTPHandler(
