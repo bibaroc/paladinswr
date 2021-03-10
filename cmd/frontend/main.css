@@ -1,0 +1,30 @@
+*,
+*::after,
+*::before {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  box-sizing: inherit;
+}
+
+html {
+  font-size: 80% /*62.5%*/;
+}
+
+body {
+  box-sizing: border-box;
+  font-family: "Lato", sans-serif;
+  font-weight: 400;
+  line-height: 1.7;
+  padding: 1rem;
+}
+
+:root{
+  --purple: rgba(142, 31, 195);
+  --blue: rgba(6, 111, 197);
+  --solid-white: rgba(255, 255, 255);
+  --white: rgba(255, 255, 255, 0.667);
+  --dark: #181820;
+  --dark-accent: #0f0e15;
+}
